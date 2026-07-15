@@ -1,24 +1,33 @@
 # Prompt History
 
-This folder contains representative prompts used during AI-assisted development.
+Full prompt/chat history for the AI-assisted Support Ticket Management assessment.
 
-## How to Export from Cursor
+These files show how Cursor was used across the lifecycle: requirement analysis → planning → implementation → testing → debugging → documentation.
 
-1. Open relevant chat sessions in Cursor
-2. Copy key prompts and responses into numbered files (e.g. `01-requirements-analysis.md`, `02-state-machine.md`)
-3. Include iteration prompts where AI output was corrected
+## Index
 
-## Representative Prompt Topics
+| File | Topic | Phase |
+|------|-------|-------|
+| [01-requirements-analysis.md](./01-requirements-analysis.md) | PDF review & approach | Planning |
+| [02-monorepo-scaffold.md](./02-monorepo-scaffold.md) | Repo structure & workflow docs | Foundation |
+| [03-database-and-api.md](./03-database-and-api.md) | Prisma, API, state machine | Backend |
+| [04-integration-tests.md](./04-integration-tests.md) | State-machine integration tests | Testing |
+| [05-frontend-pages.md](./05-frontend-pages.md) | React pages & TanStack Query | Frontend |
+| [06-debugging-port-conflict.md](./06-debugging-port-conflict.md) | EADDRINUSE fix | Debugging |
+| [07-developer-guide.md](./07-developer-guide.md) | Setup / DB / package docs | Documentation |
 
-1. Requirement analysis from assessment PDF
-2. Repository structure and monorepo setup
-3. Prisma schema and seed data design
-4. State machine implementation and integration tests
-5. React pages with TanStack Query
-6. Error handling for invalid status transitions
+## How to read each entry
 
-## Sample Entry
+Each file includes:
 
-**Prompt:** Implement the ticket status state machine as a pure function module. Valid transitions: OPEN→IN_PROGRESS|CANCELLED, IN_PROGRESS→RESOLVED|CANCELLED, RESOLVED→CLOSED. Invalid transitions must throw StatusTransitionError.
+1. **Prompt** — what was asked
+2. **AI response summary** — what was generated
+3. **Iteration / correction** — where suggestions were reviewed or fixed
+4. **Traceability** — where the outcome lives in the repo
 
-**Outcome:** Created `apps/api/src/state-machine/ticket-status.ts` with `canTransition`, `assertValidTransition`, and integration tests proving backend rejection of invalid transitions.
+## Notes for reviewers
+
+- Primary AI tool: **Cursor**
+- Spec-driven artifacts: `tool-specific/cursor-workflow/`
+- Reflection of AI correction: see [03-database-and-api.md](./03-database-and-api.md) and root `reflection.md`
+- Workflow overview: root `tool-workflow.md`
