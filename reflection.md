@@ -1,5 +1,7 @@
 # Reflection
 
+Primary AI tool: **Cursor**. Spec-driven workflow artifacts live under `tool-specific/cursor-workflow/`. Prompt history is in `prompt-history/`.
+
 ## What Went Well
 
 - Spec-first approach kept scope focused on Core requirements
@@ -17,12 +19,14 @@
 
 An initial AI suggestion placed status transition validation only in the route handler inline. I refactored to a dedicated `state-machine/ticket-status.ts` module with `assertValidTransition()` and explicit `StatusTransitionError`. This improved testability and matched the spec requirement that invalid transitions be rejected at the backend with clear errors.
 
+Documented in `docs/debugging-and-review.md` and `prompt-history/03-database-and-api.md`.
+
 ## What I Would Improve
 
-- Add unit tests for Zod validators and the state machine function in isolation
-- Implement Stretch features: pagination, priority/assignee filters, OpenAPI docs
+- Stretch features: pagination, priority/assignee filters, OpenAPI/Swagger docs
 - Add Docker Compose service for the API to simplify onboarding
-- Use a dedicated test database to avoid test data interfering with dev seed data
+- Dedicated test database isolation from seed data
+- Deeper service-layer failure tests beyond validators/state machine units
 
 ## Ownership
 

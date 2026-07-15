@@ -18,6 +18,8 @@ A practical guide for working with the Support Ticket Management project day to 
 10. [Common Problems & Fixes](#10-common-problems--fixes)
 11. [Package Reference](#11-package-reference)
 12. [Useful Commands Cheat Sheet](#12-useful-commands-cheat-sheet)
+13. [Middleware Explained](#13-middleware-explained)
+14. [Database Config & Switching to MySQL](#14-database-config--switching-to-mysql)
 
 ---
 
@@ -608,10 +610,112 @@ curl http://localhost:3001/health
 
 ---
 
+## 13. Middleware Explained
+
+### What is middleware?
+
+In Express, **middleware** is a function that runs between receiving a request and sending a response. It can:
+
+- read or change `req` / `res`
+- end the request early (send a response)
+- call `next()` to continue to the next middleware/route
+- call `next(error)` to jump to the error handler
+
+```
+Browser request
+  → cors()
+  → express.json()
+  → route handler (wrapped in asyncHandler)
+  → errorHandler (if something failed)
+  → JSON response
+```
+
+### Middleware used in this project
+
+All wiring is in [`apps/api/src/app.ts`](../apps/api/src/app.ts).
+
+| Middleware | File / package | Benefit in this project |
+|------------|----------------|-------------------------|
+| **`cors()`** | `cors` npm package | Lets the React app on `:5173` call the API on `:3001` without browser CORS errors |
+| **`express.json()`** | Built into Express | Parses JSON request bodies into `req.body` for create/update/comment endpoints |
+| **`asyncHandler(...)`** | `apps/api/src/middleware/error-handler.ts` | Forwards async route errors to the error handler (no try/catch in every route) |
+| **`errorHandler`** | same file, registered last | Converts Zod/status/business errors into a consistent `{ message, errors[] }` JSON response |
+
+**Error handler mapping:**
+
+| Error type | HTTP status |
+|------------|-------------|
+| Zod validation failure | 400 |
+| Invalid status transition | 422 |
+| Ticket/user not found | 404 |
+| Unexpected errors | 500 |
+
+Not used in Core (optional later): auth middleware, rate limiting, Helmet, request logging.
+
+---
+
+## 14. Database Config & Switching to MySQL
+
+### Where database config is defined
+
+| File | Role |
+|------|------|
+| [`apps/api/prisma/schema.prisma`](../apps/api/prisma/schema.prisma) | `provider = "postgresql"` + `url = env("DATABASE_URL")` |
+| [`apps/api/.env`](../apps/api/.env) (local only) | Real connection string |
+| [`.env.example`](../.env.example) | Template for new developers |
+| [`docker-compose.yml`](../docker-compose.yml) | Local Postgres container settings |
+| [`apps/api/src/lib/prisma.ts`](../apps/api/src/lib/prisma.ts) | Prisma Client used by services |
+
+Current URL shape:
+
+```bash
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/support_tickets
+```
+
+### Switching from PostgreSQL to MySQL
+
+Business logic usually stays the same (Prisma abstracts most SQL). You mainly change config, Docker, and migrations.
+
+1. **Prisma provider** in `schema.prisma`:
+
+```prisma
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+```
+
+2. **Connection string** in `apps/api/.env` / `.env.example`:
+
+```bash
+DATABASE_URL=mysql://root:mysql@localhost:3306/support_tickets
+```
+
+3. **Docker Compose** — replace Postgres service with MySQL 8 (port `3306`, `MYSQL_ROOT_PASSWORD`, `MYSQL_DATABASE`).
+
+4. **New migrations** — delete/archive old Postgres migrations, then:
+
+```bash
+cd apps/api
+npx prisma migrate dev --name init_mysql
+npx prisma generate
+npm run db:seed
+npm run test
+```
+
+5. **Update docs** that mention `psql`, port `5432`, or Postgres-only SQL examples.
+
+**Watch out for:** case-insensitive search (`mode: 'insensitive'`) behavior/collation differences; old Postgres migration SQL is not reusable.
+
+For deeper pros/cons and alternatives, see [TOOLS_AND_CONCEPTS.md](./TOOLS_AND_CONCEPTS.md) Part G.
+
+---
+
 ## Related Docs
 
 - [README.md](../README.md) — quick start
 - [requirements.md](./requirements.md) — feature requirements
 - [design.md](./design.md) — architecture decisions
 - [testing-notes.md](./testing-notes.md) — test strategy
+- [TOOLS_AND_CONCEPTS.md](./TOOLS_AND_CONCEPTS.md) / [TOOLS_AND_CONCEPTS.pdf](./TOOLS_AND_CONCEPTS.pdf) — tools, concepts, pros/cons, alternatives (includes middleware + MySQL switch)
 - [tool-specific/cursor-workflow/spec.md](../tool-specific/cursor-workflow/spec.md) — API spec

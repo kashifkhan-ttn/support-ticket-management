@@ -23,6 +23,7 @@ describe('Ticket status state machine', () => {
   let cancelledTicketId: string;
 
   beforeAll(async () => {
+    await prisma.$connect();
     const user = await prisma.user.findFirst();
     if (!user) throw new Error('Seed users required for tests');
     userId = user.id;
@@ -93,12 +94,16 @@ describe('Ticket status state machine', () => {
   });
 
   afterAll(async () => {
-    await prisma.comment.deleteMany({
-      where: { ticket: { title: { in: TEST_TICKET_TITLES } } },
-    });
-    await prisma.ticket.deleteMany({
-      where: { title: { in: TEST_TICKET_TITLES } },
-    });
+    try {
+      await prisma.comment.deleteMany({
+        where: { ticket: { title: { in: TEST_TICKET_TITLES } } },
+      });
+      await prisma.ticket.deleteMany({
+        where: { title: { in: TEST_TICKET_TITLES } },
+      });
+    } finally {
+      await prisma.$disconnect();
+    }
   });
 
   describe('valid transitions', () => {
@@ -216,14 +221,53 @@ describe('Ticket API validation', () => {
     expect(res.body.errors).toBeDefined();
   });
 
+  it('returns 400 for invalid ticket id format', async () => {
+    const res = await request(app).get('/api/tickets/not-a-valid-id');
+
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects empty comment message without hitting DB', async () => {
+    const res = await request(app)
+      .post('/api/tickets/clxxxxxxxxxxxxxxxxxxxxxxxxx/comments')
+      .send({ message: '' });
+
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects invalid status enum on transition endpoint', async () => {
+    const res = await request(app)
+      .patch('/api/tickets/clxxxxxxxxxxxxxxxxxxxxxxxxx/status')
+      .send({ status: 'DONE' });
+
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('Ticket API validation (requires database)', () => {
+  beforeAll(async () => {
+    await prisma.$connect();
+  });
+
+  afterAll(async () => {
+    await prisma.$disconnect();
+  });
+
   it('returns 404 for unknown ticket with valid id format', async () => {
     const res = await request(app).get('/api/tickets/clxxxxxxxxxxxxxxxxxxxxxxxxx');
 
     expect(res.status).toBe(404);
   });
 
-  it('returns 400 for invalid ticket id format', async () => {
-    const res = await request(app).get('/api/tickets/not-a-valid-id');
+  it('rejects unknown assignee on create', async () => {
+    const res = await request(app)
+      .post('/api/tickets')
+      .send({
+        title: 'Bad assignee',
+        description: 'assignee does not exist',
+        priority: Priority.MEDIUM,
+        assignedToId: 'clxxxxxxxxxxxxxxxxxxxxxxxxx',
+      });
 
     expect(res.status).toBe(400);
   });
